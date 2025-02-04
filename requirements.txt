@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+sqlite3  # Modulo standard, non serve installarlo
+yt-dlp
+requests

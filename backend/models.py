@@ -11,5 +11,7 @@ class Download(Base):
     quality = Column(String)
     status = Column(String)
     file_path = Column(String, nullable=True)
+    channel_name = Column(String, nullable=True)   # Nuova colonna
+    video_title = Column(String, nullable=True)      # Nuova colonna
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 

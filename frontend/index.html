@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>VodArchivist Dashboard</title>
+    <!-- Importa Quicksand da Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Importa Vue.js e Axios tramite CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+      /* Stile globale */
+      body {
+        font-family: 'Quicksand', sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #6441A5, #2a0845);
+        color: #fff;
+      }
+      .container {
+        max-width: 1200px;
+        margin: auto;
+        padding: 20px;
+      }
+      h1, h2, h3 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .card {
+        background: rgba(0, 0, 0, 0.5);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .card form {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+      }
+      .card form label {
+        flex: 1 1 200px;
+        margin: 10px;
+      }
+      .card form input,
+      .card form button {
+        padding: 10px;
+        border: none;
+        border-radius: 4px;
+        margin-top: 5px;
+      }
+      .card form button {
+        background: #ff5a5f;
+        color: #fff;
+        cursor: pointer;
+      }
+      .control-buttons {
+        text-align: center;
+        margin: 20px 0;
+      }
+      .control-buttons button {
+        padding: 10px 20px;
+        margin: 0 10px;
+        border: none;
+        border-radius: 4px;
+        background: #ff5a5f;
+        color: #fff;
+        cursor: pointer;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th, td {
+        padding: 10px;
+        text-align: left;
+      }
+      th {
+        background: rgba(0, 0, 0, 0.3);
+      }
+      tr:nth-child(even) {
+        background: rgba(0, 0, 0, 0.2);
+      }
+      progress {
+        width: 100px;
+      }
+      .clickable {
+        cursor: pointer;
+        text-decoration: underline;
+        color: #ffdd57;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="container">
+      <h1>VodArchivist Dashboard</h1>
+      
+      <!-- Sezione Nuovo Download -->
+      <div class="card">
+        <h2>Avvia un Nuovo Download</h2>
+        <form @submit.prevent="startDownload">
+          <label>
+            URL VOD:
+            <input type="text" v-model="newVodUrl" placeholder="Inserisci URL VOD" required>
+          </label>
+          <label>
+            Qualità (es. 720 o best):
+            <input type="text" v-model="newQuality" placeholder="best o 720" required>
+          </label>
+          <div style="flex-basis: 100%; text-align: center;">
+            <button type="submit">Avvia Download</button>
+          </div>
+        </form>
+      </div>
+      
+      <!-- Sezione Controllo Download -->
+      <div class="card">
+        <h2>Controllo Download</h2>
+        <div class="control-buttons">
+          <button @click="pauseDownloads">Pausa Download</button>
+          <button @click="resumeDownloads">Riprendi Download</button>
+          <button @click="stopDownloads">Stop Download</button>
+          <button @click="restartDownloads">Riavvia Download</button>
+        </div>
+      </div>
+      
+      <!-- Stato Download (in tempo reale) -->
+      <div class="card">
+        <h2>Stato Download (in tempo reale)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>VOD URL</th>
+              <th>Qualità</th>
+              <th>Stato</th>
+              <th>Progresso</th>
+              <th>Velocità</th>
+              <th>ETA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(status, url) in downloadStatus" :key="url">
+              <td>{{ url }}</td>
+              <td>{{ getQuality(url) }}</td>
+              <td>{{ status.state }}</td>
+              <td>
+                <progress :value="parseFloat(status.progress)" max="100"></progress>
+                {{ status.progress }}
+              </td>
+              <td>{{ status.speed }}</td>
+              <td>{{ status.eta }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Storico Download -->
+      <div class="card">
+        <h2>Storico Download</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Canale</th>
+              <th>Titolo Video</th>
+              <th>VOD URL</th>
+              <th>Qualità</th>
+              <th>Stato</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="download in downloads" :key="download.vod_url">
+              <td>{{ download.channel_name || "N/A" }}</td>
+              <td>{{ download.video_title || "N/A" }}</td>
+              <td>{{ download.vod_url }}</td>
+              <td>{{ download.quality }}</td>
+              <td>{{ download.status }}</td>
+              <td>{{ download.created_at }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Sezione Watchdog -->
+      <div class="card">
+        <h2>Watchdog del Canale</h2>
+        <form @submit.prevent="addWatchdog">
+          <label>
+            Nome Canale:
+            <input type="text" v-model="watchdogChannel" placeholder="Inserisci nome canale" required>
+          </label>
+          <label>
+            Intervallo (sec):
+            <input type="number" v-model.number="watchdogInterval" placeholder="3600" required>
+          </label>
+          <label>
+            Qualità:
+            <input type="text" v-model="watchdogQuality" placeholder="best o 720" required>
+          </label>
+          <div style="flex-basis: 100%; text-align: center;">
+            <button type="submit">Aggiungi al Watchdog</button>
+          </div>
+        </form>
+        <div>
+          <h3>Canali Monitorati</h3>
+          <ul>
+            <li v-for="(data, channel) in watchdogList" :key="channel">
+              {{ channel }} - Intervallo: {{ data.interval }} sec - Qualità: {{ data.quality }} - Ultimo controllo: {{ data.last_checked }}
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Sezione Explorer del Canale -->
+      <div class="card">
+        <h2>Explorer del Canale</h2>
+        <form @submit.prevent="exploreChannel">
+          <label>
+            Nome Canale:
+            <input type="text" v-model="explorerChannel" placeholder="Inserisci nome canale" required>
+          </label>
+          <div style="flex-basis: 100%; text-align: center;">
+            <button type="submit">Esplora</button>
+          </div>
+        </form>
+        <div v-if="explorerData">
+          <h3>Video di {{ explorerData.channel }}</h3>
+          <ul>
+            <li v-for="vod in explorerData.vods" :key="vod.id">
+              <!-- Cliccando sul titolo, il VOD viene aggiunto alla coda -->
+              <span @click="queueExplorerVod(vod.url, watchdogQuality)" class="clickable">{{ vod.title }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+    </div>
+    
+    <script>
+      new Vue({
+        el: "#app",
+        data: {
+          newVodUrl: "",
+          newQuality: "best",
+          downloadStatus: {},
+          downloads: [],
+          qualityMap: {},
+          watchdogChannel: "",
+          watchdogInterval: 3600,
+          watchdogQuality: "best",
+          watchdogList: {},
+          explorerChannel: "",
+          explorerData: null
+        },
+        methods: {
+          startDownload() {
+            axios.post('/download_vod/', {
+              vod_url: this.newVodUrl,
+              quality: this.newQuality
+            })
+            .then(response => {
+              alert(response.data.message);
+              this.qualityMap[this.newVodUrl] = this.newQuality;
+              this.newVodUrl = "";
+              this.newQuality = "best";
+              this.fetchDownloadStatus();
+              this.fetchDownloads();
+            })
+            .catch(error => {
+              console.error(error);
+              alert("Errore nell'avvio del download");
+            });
+          },
+          pauseDownloads() {
+            axios.post('/pause_downloads/')
+              .then(response => {
+                alert(response.data.message);
+              })
+              .catch(error => {
+                console.error(error);
+                alert("Errore nel mettere in pausa i download");
+              });
+          },
+          resumeDownloads() {
+            axios.post('/resume_downloads/')
+              .then(response => {
+                alert(response.data.message);
+              })
+              .catch(error => {
+                console.error(error);
+                alert("Errore nel riprendere i download");
+              });
+          },
+          stopDownloads() {
+            axios.post('/stop_downloads/')
+              .then(response => {
+                alert(response.data.message);
+              })
+              .catch(error => {
+                console.error(error);
+                alert("Errore nello stop dei download");
+              });
+          },
+          restartDownloads() {
+            axios.post('/restart_downloads/')
+              .then(response => {
+                alert(response.data.message);
+              })
+              .catch(error => {
+                console.error(error);
+                alert("Errore nel riavvio dei download");
+              });
+          },
+          fetchDownloadStatus() {
+            axios.get('/download_status/')
+              .then(response => {
+                this.downloadStatus = response.data;
+              })
+              .catch(error => {
+                console.error(error);
+              });
+          },
+          fetchDownloads() {
+            axios.get('/downloads/')
+              .then(response => {
+                this.downloads = response.data;
+              })
+              .catch(error => {
+                console.error(error);
+              });
+          },
+          getQuality(url) {
+            return this.qualityMap[url] || "N/A";
+          },
+          addWatchdog() {
+            axios.post('/watchdog/', {
+              channel: this.watchdogChannel,
+              interval: this.watchdogInterval,
+              quality: this.watchdogQuality
+            })
+            .then(response => {
+              alert(response.data.message);
+              this.watchdogChannel = "";
+              this.watchdogInterval = 3600;
+              this.watchdogQuality = "best";
+              this.fetchWatchdogList();
+            })
+            .catch(error => {
+              console.error(error);
+              alert("Errore nell'aggiunta del canale al watchdog");
+            });
+          },
+          fetchWatchdogList() {
+            axios.get('/watchdog/')
+              .then(response => {
+                this.watchdogList = response.data;
+              })
+              .catch(error => {
+                console.error(error);
+              });
+          },
+          exploreChannel() {
+            axios.get(`/channel/${this.explorerChannel}`)
+              .then(response => {
+                if(response.data.error) {
+                  alert(response.data.error);
+                } else {
+                  this.explorerData = response.data;
+                }
+              })
+              .catch(error => {
+                console.error(error);
+                alert("Errore durante l'esplorazione del canale");
+              });
+          },
+          queueExplorerVod(url, quality) {
+            axios.post('/download_vod/', {
+              vod_url: url,
+              quality: quality
+            })
+            .then(response => {
+              alert("VOD aggiunto alla coda: " + response.data.message);
+              this.fetchDownloadStatus();
+              this.fetchDownloads();
+            })
+            .catch(error => {
+              console.error(error);
+              alert("Errore nell'aggiunta del VOD alla coda");
+            });
+          }
+        },
+        mounted() {
+          this.fetchDownloadStatus();
+          this.fetchDownloads();
+          this.fetchWatchdogList();
+          setInterval(() => {
+            this.fetchDownloadStatus();
+            this.fetchDownloads();
+            this.fetchWatchdogList();
+          }, 5000);
+        }
+      });
+    </script>
+  </body>
+</html>
+

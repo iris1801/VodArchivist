@@ -21,7 +21,7 @@ Do you love Twitch content but hate seeing VODs vanish into the void? Fear not! 
 
 📸 Screenshot
 
- (Add a screenshot of the UI here!)
+ 
 
 
 ---

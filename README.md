@@ -30,23 +30,31 @@ Do you love Twitch content but hate seeing VODs vanish into the void? Fear not! 
 
 1. Clone the repository
 
+```
 git clone https://github.com/iris1801/VodArchivist.git
 cd VodArchivist
+```
 
 2. Install dependencies
 
 If you're using a virtual environment, activate it first:
 
+```
 python3 -m venv venv
 source venv/bin/activate  # On Windows, use venv\Scripts\activate
+```
 
 Then install the required packages:
 
+```
 pip install -r requirements.txt
+```
 
 3. Run the app
 
+```
 uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
 Now, open your browser and go to:
 📍 http://127.0.0.1:8000/dashboard/
@@ -60,10 +68,13 @@ Enjoy your personal Twitch VOD archive! 🎉
 
 Want VodArchivist to run 24/7 on your server? Set it up as a systemd service!
 
+```
 sudo nano /etc/systemd/system/vodarchivist.service
+```
 
 Paste this inside:
 
+```
 [Unit]
 Description=VodArchivist Service
 After=network.target
@@ -77,12 +88,15 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
+```
 
 Then enable and start the service:
 
+```
 sudo systemctl daemon-reload
 sudo systemctl enable vodarchivist
 sudo systemctl start vodarchivist
+```
 
 Boom! 🎇 Now it runs on startup!
 
@@ -93,7 +107,22 @@ Boom! 🎇 Now it runs on startup!
 
 Want to integrate VodArchivist with something else? Here's a quick look at the available API endpoints:
 
+```
+POST /download_vod/ → Queue a new VOD for download
 
+GET /download_status/ → Check active download progress
+
+GET /downloads/ → Get the history of completed downloads
+
+POST /watchdog/ → Add a new channel to the auto-download list
+
+PUT /watchdog/ → Update an existing watchdog
+
+DELETE /watchdog/{channel_name} → Remove a channel from the watchdog list
+
+GET /channel/{channel_name} → List available VODs for a streamer
+
+```
 ---
 
 🎮 Contributing

@@ -4,3 +4,5 @@ yt-dlp
 requests
 python-dotenv
 pydantic
+SQLAlchemy
+

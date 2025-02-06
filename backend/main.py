@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from backend.twitch_auth import get_twitch_token
 from backend.twitch_api import get_vods
 from pydantic import BaseModel
-from backend.vod_downloader import download_vod
+from backend.vod_downloader import download_queue, download_status
 
 app = FastAPI()
 
@@ -31,10 +31,13 @@ def fetch_vods(channel_name: str):
         return {"error": str(e)}
 
 @app.post("/download_vod/")
-def fetch_and_download_vod(request: VodRequest):
-    """Scarica un VOD da Twitch"""
-    try:
-        download_vod(request.vod_url, quality=request.quality)
-        return {"message": f"Download avviato per {request.vod_url} con qualità {request.quality}p"}
-    except Exception as e:
-        return {"error": str(e)}
+def queue_download_vod(request: VodRequest):
+    """Aggiunge un download alla coda"""
+    download_queue.put((request.vod_url, request.quality))
+    return {"message": f"Download accodato per {request.vod_url} con qualità {request.quality}p"}
+
+@app.get("/download_status/")
+def get_download_status():
+    """Restituisce lo stato dei download in corso e completati"""
+    return download_status
+

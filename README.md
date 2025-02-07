@@ -15,6 +15,7 @@ Do you love Twitch content but hate seeing VODs vanish into the void? Fear not! 
 ✅ Pause, Resume & Stop Downloads - You’re in full control. Pause an ongoing download, resume it later, or stop everything if your SSD starts crying.
 ✅ Download History & File Size Tracking - See what you've archived, when, and how big those files are.
 ✅ Modify or Delete Watchdogs - Change intervals, tweak quality settings, or remove a streamer from your auto-download list with just a click.
+✅ NFO generation and fully compatible with Plex/Jellyfin scrapers
 
 
 ---

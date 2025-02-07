@@ -3,6 +3,7 @@ import os
 import yt_dlp
 import queue
 import threading
+import time
 from datetime import datetime
 from backend.database import SessionLocal
 from backend.models import Download
@@ -56,6 +57,8 @@ def download_worker():
         except queue.Empty:
             continue
 
+
+
         # Se, dopo aver preso un job, è stato richiesto lo stop, salta il job
         if stop_all:
             download_queue.task_done()
@@ -102,6 +105,8 @@ def download_worker():
             download_record.video_title = video_title
             db.commit()
             print(f"[Worker] Download completato per {vod_url}")
+            time.sleep(10)
+            del download_status[vod_url]
         except Exception as e:
             download_status[vod_url]['state'] = f"Errore: {str(e)}"
             download_record.status = f"Errore: {str(e)}"

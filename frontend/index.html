@@ -206,24 +206,29 @@
           <div style="flex-basis: 100%; text-align: center;">
             <button type="submit">Aggiungi al Watchdog</button>
           </div>
-        </form>
-        <div>
+        </form>  
+      </div>
+      
+	  <div class="card">
           <h3>Canali Monitorati</h3>
           <ul>
             <li v-for="(data, channel) in watchdogList" :key="channel">
+			<div style="flex-basis: 100%; text-align: center;">
               {{ channel }} - Intervallo: {{ data.interval }} sec - Qualità: {{ data.quality }} - Ultimo controllo: {{ data.last_checked }}
+			</div>  
             </li>
           </ul>
         </div>
-      </div>
-      
+	  
       <!-- Sezione Explorer del Canale -->
       <div class="card">
         <h2>Explorer del Canale</h2>
         <form @submit.prevent="exploreChannel">
           <label>
+		  <div style="flex-basis: 100%; text-align: center;">
             Nome Canale:
             <input type="text" v-model="explorerChannel" placeholder="Inserisci nome canale" required>
+			</div>
           </label>
           <div style="flex-basis: 100%; text-align: center;">
             <button type="submit">Esplora</button>

@@ -9,6 +9,7 @@ from .models import Download
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 from .watchdog import start_watchdog, add_channel, list_channels
+from .twitch_auth import save_config, load_config
 
 app = FastAPI()
 
@@ -132,3 +133,18 @@ def restart_downloads():
     vod_downloader.resume_event.set()
     return {"message": "Download riavviati."}
 
+class TwitchCredentialsRequest(BaseModel):
+    client_id: str
+    client_secret: str
+
+@app.post("/update_twitch_credentials/")
+def update_twitch_credentials(request: TwitchCredentialsRequest):
+    """Aggiorna le credenziali Twitch nel file di configurazione."""
+    save_config(request.client_id, request.client_secret)
+    return {"message": "Credenziali aggiornate con successo!"}
+
+@app.get("/get_twitch_credentials/")
+def get_twitch_credentials():
+    """Restituisce le credenziali attualmente salvate (solo il client_id, per sicurezza)."""
+    config = load_config()
+    return {"client_id": config.get("client_id")}

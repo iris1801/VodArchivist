@@ -4,6 +4,7 @@ import yt_dlp
 import queue
 import threading
 import time
+import json
 from datetime import datetime
 from backend.database import SessionLocal
 from backend.models import Download
@@ -25,22 +26,42 @@ if not os.path.exists(DOWNLOAD_PATH):
     os.makedirs(DOWNLOAD_PATH)
 
 
-def generate_nfo(video_info, file_path):
-    """ Crea un file .nfo accanto al video scaricato """
-    nfo_content = f"""<video>
-    <title>{video_info.get("title", "Unknown Video")}</title>
-    <originaltitle>{video_info.get("title", "Unknown Video")}</originaltitle>
-    <showtitle>{video_info.get("uploader", "Unknown Creator")}</showtitle>
-    <season>{datetime.utcnow().year}</season>
-    <plot>{video_info.get("description", "Nessuna descrizione disponibile.")}</plot>
-    <aired>{video_info.get("upload_date", "Unknown Date")}</aired>
-    <studio>{video_info.get("uploader", "Unknown Creator")}</studio>
-    <id>{video_info.get("webpage_url", "N/A")}</id>
-</video>"""
+def get_next_episode_number(creator_name, year):
+    """ Trova il prossimo numero episodio disponibile per il creator in base all'anno """
+    season_path = os.path.join(DOWNLOAD_PATH, creator_name, f"Stagione {year}")
+    if not os.path.exists(season_path):
+        return 1  # Primo episodio della stagione
 
-    # Scrive il file .nfo accanto al video
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(nfo_content)
+    episode_numbers = []
+    for file in os.listdir(season_path):
+        if file.endswith(".mp4"):
+            parts = file.split(" - ")
+            if len(parts) > 1 and "S" in parts[0] and "E" in parts[0]:
+                try:
+                    episode_number = int(parts[0].split("E")[1])
+                    episode_numbers.append(episode_number)
+                except ValueError:
+                    continue
+
+    return max(episode_numbers, default=0) + 1  # Prossimo episodio disponibile
+
+
+def create_nfo_file(nfo_path, creator_name, title, year, episode_number, vod_url, aired_date):
+    """ Crea un file .nfo per Plex nel formato corretto """
+    nfo_content = f"""<episodedetails>
+    <title>{title}</title>
+    <originaltitle>{title}</originaltitle>
+    <showtitle>{creator_name}</showtitle>
+    <season>{year}</season>
+    <episode>{episode_number}</episode>
+    <plot>None</plot>
+    <aired>{aired_date}</aired>
+    <studio>Twitch</studio>
+    <id>{vod_url}</id>
+</episodedetails>"""
+
+    with open(nfo_path, "w", encoding="utf-8") as nfo_file:
+        nfo_file.write(nfo_content)
 
 
 def download_vod(vod_url: str, quality: str = "best", progress_callback=None):
@@ -51,19 +72,28 @@ def download_vod(vod_url: str, quality: str = "best", progress_callback=None):
         info = ydl.extract_info(vod_url, download=False)
 
     creator_name = info.get("uploader", "Unknown").replace(" ", "_")
+    title = info.get("title", "Unknown").replace("/", "-")  # Evita slash nei nomi
+    upload_date = info.get("upload_date", "Unknown")
+    vod_date = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:]}" if upload_date.isdigit() else "Unknown"
+    
     year = datetime.utcnow().year
-    season_folder = f"Season {year}"
+    season_folder = f"Stagione {year}"
+
+    # Trova il prossimo numero di episodio disponibile
+    episode_number = get_next_episode_number(creator_name, year)
+    episode_filename = f"{creator_name} - S{year}E{episode_number:02d} - {title}"
 
     # Creazione delle directory
     creator_path = os.path.join(DOWNLOAD_PATH, creator_name)
     season_path = os.path.join(creator_path, season_folder)
     os.makedirs(season_path, exist_ok=True)
 
-    # Definisce il percorso di output
-    output_template = os.path.join(season_path, "%(title)s.%(ext)s")
+    # Percorsi file
+    video_path = os.path.join(season_path, f"{episode_filename}.mp4")
+    nfo_path = os.path.join(season_path, f"{episode_filename}.nfo")
 
     options = {
-        "outtmpl": output_template,
+        "outtmpl": video_path,
         "format": f"best[height<={quality}]" if quality.isdigit() else "best",
     }
     if progress_callback:
@@ -72,12 +102,8 @@ def download_vod(vod_url: str, quality: str = "best", progress_callback=None):
     with yt_dlp.YoutubeDL(options) as ydl:
         info = ydl.extract_info(vod_url, download=True)
 
-    # Percorso del file video scaricato
-    video_file_path = os.path.join(season_path, f"{info.get('title', 'Unknown')}.{info.get('ext', 'mp4')}")
-    
-    # Genera il file .nfo accanto al video
-    nfo_file_path = os.path.splitext(video_file_path)[0] + ".nfo"
-    generate_nfo(info, nfo_file_path)
+    # Crea il file NFO dopo il download
+    create_nfo_file(nfo_path, creator_name, title, year, episode_number, vod_url, vod_date)
 
     return info
 

@@ -1,6 +1,19 @@
 import requests
-from backend.config import TWITCH_CLIENT_ID
+import json
+import os
 from backend.twitch_auth import get_twitch_token
+
+CONFIG_FILE = "config.json"
+
+def load_config():
+    """Carica client_id e client_secret da config.json"""
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            config = json.load(f)
+            return config.get("client_id", ""), config.get("client_secret", "")
+    return "", ""
+
+TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET = load_config()
 
 TWITCH_API_URL = "https://api.twitch.tv/helix"
 

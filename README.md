@@ -1,4 +1,7 @@
 
+![vodarchivist](https://github.com/user-attachments/assets/d6e2b70b-b0c7-45c3-a7e4-1b22c267251f)
+
+
 🎥 VodArchivist - Your Personal Twitch VOD Archiver 🚀
 
 Do you love Twitch content but hate seeing VODs vanish into the void? Fear not! VodArchivist is here to automate, archive, and manage your favorite Twitch VODs with ease. Whether you want to download VODs on-demand, set up automatic monitoring, or just build your own Twitch VOD library, VodArchivist has got you covered!
